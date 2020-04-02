@@ -6,6 +6,7 @@ import (
 	"github.com/gocql/gocql"
 	"kafka_cassandra/initialize"
 	"log"
+	"sync"
 	"time"
 )
 
@@ -22,14 +23,16 @@ func init() {
 
 func main() {
 
-	go sendSampleMsg()
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
 	//commandMsgChan := make(chan *sarama.ConsumerMessage, 1000)
 	startConsumer()
+	wg.Wait()
 }
 
 func startConsumer() {
-
-	consumer, err := Consumer.ConsumePartition("data", 0, sarama.OffsetNewest)
+	fmt.Println("startConsumer")
+	consumer, err := Consumer.ConsumePartition("dataq", 0, sarama.OffsetNewest)
 	if err != nil {
 		fmt.Println("Unable to consume:", err)
 	}
@@ -55,20 +58,31 @@ func startConsumer() {
 			}
 		}
 	}()
+	sendSampleMsgs()
 }
 
-func sendSampleMsg() {
-	data := "test_data"
-	saramaMsg := sarama.ProducerMessage{
-		Topic:     "data",
-		Key:       sarama.StringEncoder("test_id"),
-		Value:     sarama.StringEncoder(data),
-		Timestamp: time.Now(),
-	}
-	_, _, err := Producer.SendMessage(&saramaMsg)
-	if err != nil {
-		fmt.Println("Unable to send:", err)
-	}
+func sendSampleMsgs() {
+	fmt.Println("sendSampleMsgs")
+	i := 0
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		for {
+			data := fmt.Sprintf("test_data:%v", i)
+			saramaMsg := sarama.ProducerMessage{
+				Topic:     "dataq",
+				Key:       sarama.StringEncoder("test_id"),
+				Value:     sarama.StringEncoder(data),
+				Timestamp: time.Now(),
+			}
+			_, _, err := Producer.SendMessage(&saramaMsg)
+			if err != nil {
+				fmt.Println("Unable to send:", err)
+			}
+			i++
+		}
+	}(wg)
+	wg.Wait()
 }
 
 

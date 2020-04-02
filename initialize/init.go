@@ -1,16 +1,21 @@
 package initialize
 
 import (
+	"fmt"
 	"github.com/Shopify/sarama"
 	"github.com/gocql/gocql"
 )
 
-var Broker = []string{"127.0.0.1"}
+var Broker = []string{"kafka_ip:9092"}
 
 func NewProducer() sarama.SyncProducer {
 
 	config := sarama.NewConfig()
-	producer, _ := sarama.NewSyncProducer(Broker, config)
+	config.Producer.Return.Successes = true
+	producer, err := sarama.NewSyncProducer(Broker, config)
+	if err != nil  {
+		fmt.Println(err)
+	}
 	return producer
 }
 
